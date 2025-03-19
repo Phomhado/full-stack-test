@@ -1,26 +1,20 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const corsOptions = require('./config/corsOptions');
+const { handleSendMessage } = require('./controllers/messageController');
+const messageRoutes = require('./routes/messageRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
-});
+const io = socketIo(server, { cors: corsOptions });
 
 io.on('connection', (socket) => {
   console.log(`New user connected: ${socket.id}`);
-
-  socket.on('sendMessage', (message) => {
-    console.log('Message received:', message);
-    
-    io.emit('receiveMessage', message);
-  });
-
+  handleSendMessage(socket);
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
   });
@@ -28,6 +22,8 @@ io.on('connection', (socket) => {
 
 app.use(cors());
 app.use(express.json());
+app.use(authMiddleware);
+app.use('/api', messageRoutes);
 
 app.get('/', (req, res) => {
   res.send("Server is set!");
