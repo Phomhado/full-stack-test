@@ -1,33 +1,31 @@
 const fs = require('fs-extra');
 const path = require('path');
 const messagesFilePath = path.join(__dirname, '../messages.json');
-const maxFileSize = 5 * 1024 * 1024; // 5 MB
+const maxFileSize = 5 * 1024 * 1024; 
 
-const handleSendMessage = (socket) => {
+const handleSendMessage = (socket, io) => {
   socket.on('sendMessage', (message) => {
     console.log('Message received:', message);
 
-    // Read existing messages
     const messages = JSON.parse(fs.readFileSync(messagesFilePath, 'utf8'));
 
-    // Add new message
     const newMessage = {
       content: message.content,
       sender: message.sender,
+      recipient: message.recipient,
       timestamp: new Date().toISOString()
     };
     messages.push(newMessage);
 
-    // Write updated messages to file
     fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2));
 
-    // Check file size and rotate if necessary
     const stats = fs.statSync(messagesFilePath);
     if (stats.size > maxFileSize) {
       rotateLogFile();
     }
 
-    socket.broadcast.emit('receiveMessage', newMessage);
+    // Broadcast the message to all clients, including the sender
+    io.emit('receiveMessage', newMessage);
   });
 };
 
@@ -35,7 +33,7 @@ const rotateLogFile = () => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const archiveFilePath = path.join(__dirname, `../messages-${timestamp}.json`);
   fs.moveSync(messagesFilePath, archiveFilePath);
-  fs.writeFileSync(messagesFilePath, '[]'); // Create a new empty log file
+  fs.writeFileSync(messagesFilePath, '[]');
   console.log(`Log file rotated: ${archiveFilePath}`);
 };
 
@@ -61,7 +59,6 @@ const createMessage = (req, res) => {
     messages.push(newMessage);
     fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2));
 
-    // Check file size and rotate if necessary
     const stats = fs.statSync(messagesFilePath);
     if (stats.size > maxFileSize) {
       rotateLogFile();

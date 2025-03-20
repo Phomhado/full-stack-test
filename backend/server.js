@@ -13,10 +13,11 @@ const server = http.createServer(app);
 const io = socketIo(server, { cors: corsOptions });
 
 io.on('connection', (socket) => {
-  console.log(`New user connected: ${socket.id}`);
-  handleSendMessage(socket);
+  console.log('New client connected');
+  handleSendMessage(socket, io);
+
   socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
+    console.log('Client disconnected');
   });
 });
 
@@ -29,6 +30,7 @@ app.get('/', (req, res) => {
   res.send("Server is set!");
 });
 
-server.listen(5000, () => {
-  console.log('Server running on port 5000');
-});
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+module.exports = app;
